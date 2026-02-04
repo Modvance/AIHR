@@ -1,0 +1,141 @@
+# ==================== 环境变量 ====================
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+*.env
+
+# ==================== Python ====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+ENV/
+.eggs/
+*.egg-info/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.pytype/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ==================== python环境 ====================
+followup_test/test/
+audio_test/backend/venv/
+
+# ==================== Node.js ====================
+node_modules/
+dist/
+.npm
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ==================== IDE ====================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# ==================== 操作系统 ====================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.Trash-*
+
+# ==================== 构建产物 ====================
+build/
+dist/
+out/
+target/
+*.dll
+*.exe
+*.o
+*.obj
+
+# ==================== 日志文件 ====================
+logs/
+*.log
+log/
+
+# ==================== 临时文件 ====================
+temp/
+tmp/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.cache
+
+# ==================== 音频/媒体文件 ====================
+*.pcm
+*.wav
+*.mp3
+*.mp4
+*.avi
+*.mov
+*.flac
+
+# ==================== 测试和覆盖率 ====================
+coverage/
+.nyc_output/
+*.lcov
+
+# ==================== Docker ====================
+docker-compose.override.yml
+
+# ==================== Cursor ====================
+.cursor/
+
+# ==================== 其他 ====================
+# 密钥和凭证
+*.pem
+*.key
+*.crt
+credentials.json
+secrets.json
+
+# 压缩文件（按需取消注释）
+# *.zip
+# *.tar.gz
+# *.rar
+
+# 数据库
+*.db
+*.sqlite
+*.sqlite3
