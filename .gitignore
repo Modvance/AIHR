@@ -30,10 +30,6 @@ htmlcov/
 pip-log.txt
 pip-delete-this-directory.txt
 
-# ==================== python环境 ====================
-followup_test/test/
-audio_test/backend/venv/
-
 # ==================== Node.js ====================
 node_modules/
 dist/
@@ -139,3 +135,7 @@ secrets.json
 *.db
 *.sqlite
 *.sqlite3
+
+# ==================== 文档 ====================
+*.md
+!README.md
