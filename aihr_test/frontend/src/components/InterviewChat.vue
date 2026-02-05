@@ -4,9 +4,9 @@
     <header class="interview-header">
       <div class="header-content">
         <h1>AI 面试系统</h1>
-        <div class="connection-status" :class="{ connected: isConnected }">
+        <div class="connection-status" :class="connectionStatusClass">
           <span class="status-dot"></span>
-          {{ isConnected ? '已连接' : '未连接' }}
+          {{ connectionStatusText }}
         </div>
       </div>
     </header>
@@ -20,7 +20,7 @@
           <p class="setup-description">请配置面试参数后开始面试</p>
           
           <div class="form-group">
-            <label>考察主题 *</label>
+            <label>考察主题（必填）</label>
             <input 
               v-model="interviewTopic" 
               type="text" 
@@ -174,7 +174,19 @@ import { WebSocketManager } from '../utils/websocket.js'
 import { AudioRecorder } from '../utils/audioRecorder.js'
 import { AudioPlayer } from '../utils/audioPlayer.js'
 
+// 连接状态枚举
+const ConnectionState = {
+  DISCONNECTED: 'disconnected',      // 未连接
+  CONNECTING: 'connecting',          // WebSocket 连接中
+  INITIALIZING: 'initializing',      // 服务初始化中（ASR/TTS）
+  READY: 'ready',                    // 已就绪，可以使用
+  ERROR: 'error',                    // 连接错误
+  RECONNECTING: 'reconnecting'       // 重连中
+}
+
 // 状态
+const connectionState = ref(ConnectionState.DISCONNECTED)
+const connectionError = ref('')
 const isConnected = ref(false)
 const isRecording = ref(false)
 const isProcessing = ref(false)
@@ -219,6 +231,49 @@ const scoreClass = computed(() => {
   return 'low'
 })
 
+// 连接状态文本
+const connectionStatusText = computed(() => {
+  switch (connectionState.value) {
+    case ConnectionState.DISCONNECTED:
+      return '未连接'
+    case ConnectionState.CONNECTING:
+      return '连接中...'
+    case ConnectionState.INITIALIZING:
+      return '服务初始化中...'
+    case ConnectionState.READY:
+      return '已就绪'
+    case ConnectionState.ERROR:
+      return connectionError.value || '连接失败'
+    case ConnectionState.RECONNECTING:
+      return '重连中...'
+    default:
+      return '未知状态'
+  }
+})
+
+// 连接状态样式类
+const connectionStatusClass = computed(() => {
+  return {
+    connected: connectionState.value === ConnectionState.READY,
+    connecting: connectionState.value === ConnectionState.CONNECTING || 
+                connectionState.value === ConnectionState.INITIALIZING ||
+                connectionState.value === ConnectionState.RECONNECTING,
+    error: connectionState.value === ConnectionState.ERROR
+  }
+})
+
+// 请求麦克风权限
+const requestMicPermission = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    // 立即停止，只是为了获取权限
+    stream.getTracks().forEach(track => track.stop())
+    console.log('Microphone permission granted')
+  } catch (error) {
+    console.error('Microphone permission error:', error)
+  }
+}
+
 // 格式化消息（支持 Markdown）
 const formatMessage = (content) => {
   if (!content) return ''
@@ -240,12 +295,16 @@ watch(partialText, scrollToBottom)
 
 // 连接 WebSocket
 const connectWebSocket = async () => {
+  connectionState.value = ConnectionState.CONNECTING
+  connectionError.value = ''
+  
   const wsUrl = `ws://${window.location.hostname}:8000/ws/interview`
   wsManager = new WebSocketManager(wsUrl)
 
   // 注册消息处理器
   wsManager.on('session.created', (data) => {
     console.log('Session created:', data.session_id)
+    connectionState.value = ConnectionState.READY
     isConnected.value = true
   })
 
@@ -316,12 +375,48 @@ const connectWebSocket = async () => {
 
   wsManager.on('error', (data) => {
     console.error('Error:', data)
+    // 根据错误类型更新状态
+    if (data.source === 'initialization') {
+      connectionState.value = ConnectionState.ERROR
+      connectionError.value = '服务初始化失败，请刷新重试'
+      isConnected.value = false
+    } else if (data.message) {
+      connectionError.value = data.message
+    }
+  })
+
+  // 连接状态事件
+  wsManager.on('connection.closed', () => {
+    isConnected.value = false
+    if (connectionState.value === ConnectionState.READY) {
+      connectionState.value = ConnectionState.DISCONNECTED
+    }
+  })
+
+  wsManager.on('connection.reconnecting', (data) => {
+    connectionState.value = ConnectionState.RECONNECTING
+    connectionError.value = `重连中 (${data.attempt}/${data.maxAttempts})...`
+  })
+
+  wsManager.on('connection.failed', (data) => {
+    if (data.final) {
+      connectionState.value = ConnectionState.ERROR
+      connectionError.value = '连接失败，请刷新页面重试'
+      isConnected.value = false
+    }
   })
 
   try {
+    connectionState.value = ConnectionState.CONNECTING
     await wsManager.connect()
+    // 连接成功后，等待 session.created 事件
+    // 此时服务端正在初始化 ASR/TTS 服务
+    connectionState.value = ConnectionState.INITIALIZING
   } catch (error) {
     console.error('Failed to connect:', error)
+    connectionState.value = ConnectionState.ERROR
+    connectionError.value = '无法连接服务器，请检查后端是否启动'
+    isConnected.value = false
   }
 }
 
@@ -403,6 +498,9 @@ const resetInterview = () => {
 // 生命周期
 onMounted(async () => {
   audioPlayer = new AudioPlayer({ sampleRate: 24000 })
+  // 主动请求麦克风权限
+  await requestMicPermission()
+  // 连接 WebSocket
   await connectWebSocket()
 })
 
@@ -470,6 +568,30 @@ onUnmounted(() => {
 
 .connection-status.connected .status-dot {
   background: #22c55e;
+}
+
+.connection-status.connecting .status-dot {
+  background: #f59e0b;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.connection-status.error .status-dot {
+  background: #ef4444;
+}
+
+.connection-status.error {
+  color: #ef4444;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
 }
 
 /* 主内容 */

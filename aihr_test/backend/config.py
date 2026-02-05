@@ -25,7 +25,7 @@ class Settings:
     
     # TTS 配置
     TTS_MODEL: str = os.getenv("TTS_MODEL", "qwen3-tts-flash-realtime")
-    TTS_VOICE: str = os.getenv("TTS_VOICE", "Maia")
+    TTS_VOICE: str = os.getenv("TTS_VOICE", "Kai")
     TTS_SAMPLE_RATE: int = int(os.getenv("TTS_SAMPLE_RATE", "24000"))
     
     # WebSocket 配置

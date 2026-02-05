@@ -149,16 +149,20 @@ class InterviewService:
 - 不及格(0-59)：概念模糊、逻辑混乱、或明显在编造
 
 【决策规则】
-- **PASS**（合格）：候选人展示出扎实的知识和经验，能力评分 >= {settings.PASS_SCORE_THRESHOLD}
-- **FAIL**（不合格）：以下任一情况立即判定FAIL：
+- **CONTINUE**（继续追问）：
+  - 追问次数未达到 {settings.MIN_FOLLOWUP_QUESTIONS} 次时，必须选择 CONTINUE
+  - 还需要更多信息来判断时
+- **PASS**（合格）：追问次数 >= {settings.MIN_FOLLOWUP_QUESTIONS} 且候选人展示出扎实的知识和经验，能力评分 >= {settings.PASS_SCORE_THRESHOLD}
+- **FAIL**（不合格）：追问次数 >= {settings.MIN_FOLLOWUP_QUESTIONS} 且满足以下任一情况：
   - 候选人明确表示"不知道"、"不了解"、"没用过"等
   - 连续2次回答都很空洞、抓不住重点
   - 逻辑明显矛盾或在编造
   - 能力评分 < 60
-- **CONTINUE**（继续追问）：还需要更多信息来判断
 
 【重要提示】
-- 不要无限追问！一旦能够做出判断，立即给出 PASS 或 FAIL
+- 每场面试必须进行 {settings.MIN_FOLLOWUP_QUESTIONS}-{settings.MAX_FOLLOWUP_QUESTIONS} 轮追问
+- 未达到最少追问次数（{settings.MIN_FOLLOWUP_QUESTIONS}次）时，即使表现很差也要选择 CONTINUE
+- 达到最少追问次数后，如果能够做出判断，可以给出 PASS 或 FAIL
 - 如果候选人已经展示出足够的能力，不必追问到最大次数
 
 【输出格式】
@@ -437,8 +441,15 @@ class InterviewService:
         reached_min = self.state.followup_count >= settings.MIN_FOLLOWUP_QUESTIONS
         reached_max = self.state.followup_count >= settings.MAX_FOLLOWUP_QUESTIONS
         
-        if reached_min and (evaluation.action == InterviewAction.PASS or 
-                           (reached_max and evaluation.current_score >= settings.PASS_SCORE_THRESHOLD)):
+        # 必须达到最少追问次数才能结束面试
+        if not reached_min:
+            # 未达到最少追问次数，无论表现如何都继续追问
+            logger.info(f"Continue interview: not reached min questions ({self.state.followup_count}/{settings.MIN_FOLLOWUP_QUESTIONS})")
+            return "followup", evaluation
+        
+        # 达到最少追问次数后，根据评估结果决定
+        if evaluation.action == InterviewAction.PASS or \
+           (reached_max and evaluation.current_score >= settings.PASS_SCORE_THRESHOLD):
             # 通过
             self.state.is_finished = True
             self.state.final_result = "PASS"

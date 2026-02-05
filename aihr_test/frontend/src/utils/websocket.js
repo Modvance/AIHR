@@ -181,12 +181,53 @@ export class WebSocketManager {
    * 处理连接关闭
    */
   _handleClose() {
+    // 通知连接断开
+    if (this.handlers.has('connection.closed')) {
+      this.handlers.get('connection.closed').forEach(handler => handler({
+        type: 'connection.closed',
+        reconnectAttempts: this.reconnectAttempts,
+        maxReconnectAttempts: this.maxReconnectAttempts
+      }))
+    }
+    
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++
       console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`)
+      
+      // 通知开始重连
+      if (this.handlers.has('connection.reconnecting')) {
+        this.handlers.get('connection.reconnecting').forEach(handler => handler({
+          type: 'connection.reconnecting',
+          attempt: this.reconnectAttempts,
+          maxAttempts: this.maxReconnectAttempts
+        }))
+      }
+      
       setTimeout(() => {
-        this.connect().catch(console.error)
+        this.connect().catch((error) => {
+          console.error('Reconnect failed:', error)
+          // 通知重连失败
+          if (this.handlers.has('connection.failed')) {
+            this.handlers.get('connection.failed').forEach(handler => handler({
+              type: 'connection.failed',
+              error: error.message,
+              attempt: this.reconnectAttempts,
+              maxAttempts: this.maxReconnectAttempts
+            }))
+          }
+        })
       }, this.reconnectDelay * this.reconnectAttempts)
+    } else {
+      // 超过最大重连次数
+      if (this.handlers.has('connection.failed')) {
+        this.handlers.get('connection.failed').forEach(handler => handler({
+          type: 'connection.failed',
+          error: '超过最大重连次数',
+          attempt: this.reconnectAttempts,
+          maxAttempts: this.maxReconnectAttempts,
+          final: true
+        }))
+      }
     }
   }
 

@@ -1,0 +1,48 @@
+# AI 面试应用 - Docker Compose 配置（开发模式，支持热重载）
+services:
+  # 后端服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aihr-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # 挂载源代码，实现热重载
+      - ./backend:/app
+      # 排除 __pycache__ 目录
+      - /app/__pycache__
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+    restart: unless-stopped
+    networks:
+      - aihr-network
+
+  # 前端服务
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: aihr-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      # 挂载源代码，实现热重载
+      - ./frontend:/app
+      # 排除 node_modules，使用容器内安装的依赖
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - aihr-network
+
+networks:
+  aihr-network:
+    driver: bridge

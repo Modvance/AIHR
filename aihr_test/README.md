@@ -38,7 +38,8 @@ aihr_test/
 │   │   └── interview_service.py # 面试逻辑服务
 │   ├── config.py              # 配置管理
 │   ├── main.py                # FastAPI 主入口
-│   └── requirements.txt
+│   ├── requirements.txt
+│   └── Dockerfile             # 后端容器配置
 ├── frontend/                   # 前端应用
 │   ├── src/
 │   │   ├── components/
@@ -52,21 +53,54 @@ aihr_test/
 │   │   ├── App.vue
 │   │   └── main.js
 │   ├── package.json
-│   └── vite.config.js
+│   ├── vite.config.js
+│   └── Dockerfile             # 前端容器配置
+├── docker-compose.yml         # Docker 编排配置
+├── .dockerignore              # Docker 忽略文件
 ├── .env.example               # 环境变量示例
 └── README.md
 ```
 
 ## 快速开始
 
-### 1. 环境准备
+### 方式一：Docker 部署（推荐）
+
+确保已安装 Docker 和 Docker Compose。
+
+```bash
+# 1. 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件，填入你的 API Key
+
+# 2. 启动服务（支持热重载）
+docker-compose up --build
+
+# 后台运行
+docker-compose up -d --build
+
+# 查看日志
+docker-compose logs -f
+
+# 停止服务
+docker-compose down
+```
+
+服务将在以下地址启动：
+- 前端：http://localhost:5173
+- 后端：http://localhost:8000
+
+修改代码后会自动热重载，无需重启容器。
+
+### 方式二：本地部署
+
+#### 1. 环境准备
 
 确保已安装：
 - Python 3.9+
 - Node.js 18+
 - DashScope API Key（阿里云百炼平台）
 
-### 2. 配置环境变量
+#### 2. 配置环境变量
 
 ```bash
 # 复制环境变量示例文件
@@ -76,10 +110,15 @@ cp .env.example .env
 DASHSCOPE_API_KEY=your_api_key_here
 ```
 
-### 3. 启动后端
+#### 3. 启动后端
 
 ```bash
 cd backend
+
+# 创建虚拟环境（推荐）
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+# venv\Scripts\activate   # Windows
 
 # 安装依赖
 pip install -r requirements.txt
@@ -90,7 +129,7 @@ python main.py
 
 后端服务将在 http://localhost:8000 启动
 
-### 4. 启动前端
+#### 4. 启动前端
 
 ```bash
 cd frontend
@@ -104,7 +143,7 @@ npm run dev
 
 前端将在 http://localhost:5173 启动
 
-### 5. 开始面试
+### 开始面试
 
 1. 打开浏览器访问 http://localhost:5173
 2. 输入考察主题（如：React 框架、Java 并发编程等）
